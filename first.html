@@ -3,47 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Asteroid Dodge</title>
+    <title>Asteroid Dodge - Pro</title>
     <style>
         body {
             margin: 0;
-            padding: 0;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
             background-color: #1a1a1a;
             color: white;
-            font-family: Arial, sans-serif;
-            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
+
+        #game-container {
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+            background: #2c3e50;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        #canvas-wrapper {
+            position: relative;
+        }
+
         canvas {
-            border: 2px solid #444;
             background-color: #000;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            border-radius: 8px;
+            display: block;
         }
-        #ui {
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            text-align: center;
-            pointer-events: none;
+
+        /* Side Scoreboard */
+        #scoreboard {
+            width: 200px;
+            background: #34495e;
+            padding: 20px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
         }
+
+        .stat-box {
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #5d6d7e;
+        }
+
+        .stat-label { font-size: 12px; text-transform: uppercase; color: #bdc3c7; }
+        .stat-value { font-size: 24px; font-weight: bold; color: #3498db; }
+
         #game-over {
             display: none;
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.85);
+            background: rgba(0, 0, 0, 0.9);
             padding: 30px;
             border-radius: 10px;
             text-align: center;
-            border: 2px solid #555;
+            border: 2px solid #e74c3c;
+            width: 250px;
         }
+
+        input {
+            padding: 8px;
+            margin-top: 10px;
+            border-radius: 4px;
+            border: none;
+            width: 80%;
+        }
+
         button {
-            background: #3498db;
+            background: #27ae60;
             color: white;
             border: none;
             padding: 10px 20px;
@@ -52,139 +87,165 @@
             border-radius: 5px;
             margin-top: 15px;
         }
-        button:hover { background: #2980b9; }
     </style>
 </head>
 <body>
 
-    <div id="ui">
-        <h2 id="score">Score: 0</h2>
-    </div>
-
-    <div id="game-over">
-        <h1>GAME OVER</h1>
-        <p id="final-score">Final Score: 0</p>
-        <button onclick="resetGame()">Try Again</button>
-    </div>
-
-    <canvas id="gameCanvas"></canvas>
-
-    <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const scoreElement = document.getElementById('score');
-        const gameOverScreen = document.getElementById('game-over');
-        const finalScoreElement = document.getElementById('final-score');
-
-        // Game Settings
-        canvas.width = 600;
-        canvas.height = 800;
+<div id="game-container">
+    <div id="canvas-wrapper">
+        <canvas id="gameCanvas"></canvas>
         
-        let score = 0;
-        let gameActive = true;
-        let enemies = [];
-        let animationId;
+        <div id="game-over">
+            <h1 style="color: #e74c3c;">CRASHED!</h1>
+            <p>Score: <span id="final-score-val">0</span></p>
+            <div id="new-high-score" style="display:none; color: #f1c40f;">NEW HIGH SCORE!</div>
+            <input type="text" id="playerName" placeholder="Enter Name" maxlength="10">
+            <button onclick="saveAndRestart()">Play Again</button>
+        </div>
+    </div>
 
-        // Player Object
-        const player = {
-            x: canvas.width / 2,
-            y: canvas.height - 50,
-            size: 20,
-            speed: 7,
-            dx: 0
-        };
+    <div id="scoreboard">
+        <div class="stat-box">
+            <div class="stat-label">Player</div>
+            <div id="display-name" class="stat-value">---</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">Current Score</div>
+            <div id="current-score" class="stat-value">0</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">High Score</div>
+            <div id="high-score" class="stat-value">0</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">Best Pilot</div>
+            <div id="best-pilot" class="stat-value" style="font-size: 18px;">Nobody</div>
+        </div>
+    </div>
+</div>
 
-        // Input Handling
-        const keys = { ArrowLeft: false, ArrowRight: false };
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Canvas setup
+    canvas.width = 400;
+    canvas.height = 600;
 
-        window.addEventListener('keydown', (e) => { if(keys.hasOwnProperty(e.code)) keys[e.code] = true; });
-        window.addEventListener('keyup', (e) => { if(keys.hasOwnProperty(e.code)) keys[e.code] = false; });
+    let score = 0;
+    let gameActive = true;
+    let enemies = [];
+    let animationId;
+    let highScore = localStorage.getItem('asteroidHighScore') || 0;
+    let bestPilot = localStorage.getItem('asteroidBestPilot') || "Nobody";
 
-        function createEnemy() {
-            const size = Math.random() * (30 - 10) + 10;
-            enemies.push({
-                x: Math.random() * (canvas.width - size),
-                y: -size,
-                size: size,
-                speed: Math.random() * 3 + 2 + (score / 100) // Gradually gets faster
-            });
-        }
+    // Initialize UI
+    document.getElementById('high-score').innerText = highScore;
+    document.getElementById('best-pilot').innerText = bestPilot;
 
-        function drawPlayer() {
-            ctx.fillStyle = '#3498db';
+    const player = {
+        x: canvas.width / 2,
+        y: canvas.height - 50,
+        size: 15,
+        speed: 6
+    };
+
+    const keys = { ArrowLeft: false, ArrowRight: false };
+    window.addEventListener('keydown', e => keys[e.code] = true);
+    window.addEventListener('keyup', e => keys[e.code] = false);
+
+    function createEnemy() {
+        const size = Math.random() * 15 + 10;
+        enemies.push({
+            x: Math.random() * (canvas.width - size),
+            y: -size,
+            size: size,
+            speed: Math.random() * 2 + 3 + (score / 500)
+        });
+    }
+
+    function update() {
+        if (!gameActive) return;
+
+        if (keys.ArrowLeft && player.x > player.size) player.x -= player.speed;
+        if (keys.ArrowRight && player.x < canvas.width - player.size) player.x += player.speed;
+
+        if (Math.random() < 0.04) createEnemy();
+
+        enemies.forEach((enemy, i) => {
+            enemy.y += enemy.speed;
+            
+            // Collision
+            const dist = Math.hypot(player.x - enemy.x, player.y - enemy.y);
+            if (dist < enemy.size + player.size) endGame();
+
+            if (enemy.y > canvas.height + enemy.size) {
+                enemies.splice(i, 1);
+                score += 10;
+                document.getElementById('current-score').innerText = score;
+            }
+        });
+
+        draw();
+        animationId = requestAnimationFrame(update);
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Player
+        ctx.fillStyle = '#3498db';
+        ctx.beginPath();
+        ctx.moveTo(player.x, player.y - player.size);
+        ctx.lineTo(player.x - player.size, player.y + player.size);
+        ctx.lineTo(player.x + player.size, player.y + player.size);
+        ctx.fill();
+
+        // Enemies
+        ctx.fillStyle = '#a1887f';
+        enemies.forEach(e => {
             ctx.beginPath();
-            ctx.moveTo(player.x, player.y - player.size); // Top point
-            ctx.lineTo(player.x - player.size, player.y + player.size); // Bottom left
-            ctx.lineTo(player.x + player.size, player.y + player.size); // Bottom right
-            ctx.closePath();
+            ctx.arc(e.x, e.y, e.size, 0, Math.PI * 2);
             ctx.fill();
+        });
+    }
+
+    function endGame() {
+        gameActive = false;
+        cancelAnimationFrame(animationId);
+        document.getElementById('final-score-val').innerText = score;
+        document.getElementById('game-over').style.display = 'block';
+        
+        if (score > highScore) {
+            document.getElementById('new-high-score').style.display = 'block';
+        }
+    }
+
+    function saveAndRestart() {
+        const nameInput = document.getElementById('playerName').value || "Unknown";
+        document.getElementById('display-name').innerText = nameInput;
+
+        if (score > highScore) {
+            highScore = score;
+            bestPilot = nameInput;
+            localStorage.setItem('asteroidHighScore', highScore);
+            localStorage.setItem('asteroidBestPilot', bestPilot);
+            
+            document.getElementById('high-score').innerText = highScore;
+            document.getElementById('best-pilot').innerText = bestPilot;
         }
 
-        function drawEnemies() {
-            ctx.fillStyle = '#8B4513'; // Brown
-            enemies.forEach(enemy => {
-                ctx.beginPath();
-                ctx.arc(enemy.x, enemy.y, enemy.size, 0, Math.PI * 2);
-                ctx.fill();
-            });
-        }
-
-        function update() {
-            if (!gameActive) return;
-
-            // Move Player
-            if (keys.ArrowLeft && player.x > player.size) player.x -= player.speed;
-            if (keys.ArrowRight && player.x < canvas.width - player.size) player.x += player.speed;
-
-            // Update Enemies
-            if (Math.random() < 0.05) createEnemy();
-
-            enemies.forEach((enemy, index) => {
-                enemy.y += enemy.speed;
-
-                // Collision Detection (Circle vs Triangle approximation)
-                const dist = Math.hypot(player.x - enemy.x, player.y - enemy.y);
-                if (dist < enemy.size + player.size * 0.8) {
-                    endGame();
-                }
-
-                // Remove off-screen enemies and update score
-                if (enemy.y > canvas.height + enemy.size) {
-                    enemies.splice(index, 1);
-                    score += 10;
-                    scoreElement.innerText = `Score: ${score}`;
-                }
-            });
-
-            render();
-            animationId = requestAnimationFrame(update);
-        }
-
-        function render() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            drawPlayer();
-            drawEnemies();
-        }
-
-        function endGame() {
-            gameActive = false;
-            cancelAnimationFrame(animationId);
-            finalScoreElement.innerText = `Final Score: ${score}`;
-            gameOverScreen.style.display = 'block';
-        }
-
-        function resetGame() {
-            score = 0;
-            enemies = [];
-            gameActive = true;
-            player.x = canvas.width / 2;
-            scoreElement.innerText = `Score: 0`;
-            gameOverScreen.style.display = 'none';
-            update();
-        }
-
-        // Start game
+        // Reset
+        score = 0;
+        enemies = [];
+        gameActive = true;
+        document.getElementById('current-score').innerText = 0;
+        document.getElementById('game-over').style.display = 'none';
+        document.getElementById('new-high-score').style.display = 'none';
         update();
-    </script>
+    }
+
+    update();
+</script>
 </body>
 </html>
