@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asteroid Dodge</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #1a1a1a;
+            color: white;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+        canvas {
+            border: 2px solid #444;
+            background-color: #000;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            pointer-events: none;
+        }
+        #game-over {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.85);
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            border: 2px solid #555;
+        }
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-top: 15px;
+        }
+        button:hover { background: #2980b9; }
+    </style>
+</head>
+<body>
+
+    <div id="ui">
+        <h2 id="score">Score: 0</h2>
+    </div>
+
+    <div id="game-over">
+        <h1>GAME OVER</h1>
+        <p id="final-score">Final Score: 0</p>
+        <button onclick="resetGame()">Try Again</button>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('score');
+        const gameOverScreen = document.getElementById('game-over');
+        const finalScoreElement = document.getElementById('final-score');
+
+        // Game Settings
+        canvas.width = 600;
+        canvas.height = 800;
+        
+        let score = 0;
+        let gameActive = true;
+        let enemies = [];
+        let animationId;
+
+        // Player Object
+        const player = {
+            x: canvas.width / 2,
+            y: canvas.height - 50,
+            size: 20,
+            speed: 7,
+            dx: 0
+        };
+
+        // Input Handling
+        const keys = { ArrowLeft: false, ArrowRight: false };
+
+        window.addEventListener('keydown', (e) => { if(keys.hasOwnProperty(e.code)) keys[e.code] = true; });
+        window.addEventListener('keyup', (e) => { if(keys.hasOwnProperty(e.code)) keys[e.code] = false; });
+
+        function createEnemy() {
+            const size = Math.random() * (30 - 10) + 10;
+            enemies.push({
+                x: Math.random() * (canvas.width - size),
+                y: -size,
+                size: size,
+                speed: Math.random() * 3 + 2 + (score / 100) // Gradually gets faster
+            });
+        }
+
+        function drawPlayer() {
+            ctx.fillStyle = '#3498db';
+            ctx.beginPath();
+            ctx.moveTo(player.x, player.y - player.size); // Top point
+            ctx.lineTo(player.x - player.size, player.y + player.size); // Bottom left
+            ctx.lineTo(player.x + player.size, player.y + player.size); // Bottom right
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function drawEnemies() {
+            ctx.fillStyle = '#8B4513'; // Brown
+            enemies.forEach(enemy => {
+                ctx.beginPath();
+                ctx.arc(enemy.x, enemy.y, enemy.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function update() {
+            if (!gameActive) return;
+
+            // Move Player
+            if (keys.ArrowLeft && player.x > player.size) player.x -= player.speed;
+            if (keys.ArrowRight && player.x < canvas.width - player.size) player.x += player.speed;
+
+            // Update Enemies
+            if (Math.random() < 0.05) createEnemy();
+
+            enemies.forEach((enemy, index) => {
+                enemy.y += enemy.speed;
+
+                // Collision Detection (Circle vs Triangle approximation)
+                const dist = Math.hypot(player.x - enemy.x, player.y - enemy.y);
+                if (dist < enemy.size + player.size * 0.8) {
+                    endGame();
+                }
+
+                // Remove off-screen enemies and update score
+                if (enemy.y > canvas.height + enemy.size) {
+                    enemies.splice(index, 1);
+                    score += 10;
+                    scoreElement.innerText = `Score: ${score}`;
+                }
+            });
+
+            render();
+            animationId = requestAnimationFrame(update);
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawPlayer();
+            drawEnemies();
+        }
+
+        function endGame() {
+            gameActive = false;
+            cancelAnimationFrame(animationId);
+            finalScoreElement.innerText = `Final Score: ${score}`;
+            gameOverScreen.style.display = 'block';
+        }
+
+        function resetGame() {
+            score = 0;
+            enemies = [];
+            gameActive = true;
+            player.x = canvas.width / 2;
+            scoreElement.innerText = `Score: 0`;
+            gameOverScreen.style.display = 'none';
+            update();
+        }
+
+        // Start game
+        update();
+    </script>
+</body>
+</html>
