@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cozy Asteroid Dodge</title>
+    <style>
+        :root {
+            --bg-cozy: #2d1b2d; /* Warm purple-brown */
+            --panel-bg: rgba(44, 62, 80, 0.85);
+            --accent: #3498db;
+        }
+
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            /* Cozy background simulation */
+            color: white;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        #cozy-room {
+    height: 100vh;
+    width: 100%;
+    
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    /* Main cozy image */
+    background: url("cozy-room.png") no-repeat center center;
+    background-size: cover;
+
+    /* Optional warm tint (very important for mood) */
+    position: relative;
+}
+
+#cozy-room::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(20, 10, 5, 0.35); /* warm dim overlay */
+}
+
+#cozy-room::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    box-shadow: inset 0 0 200px rgba(0,0,0,0.6);
+}
+
+        /* The Main Game Frame */
+        #interface-container {
+            display: flex;
+            gap: 15px;
+            padding: 25px;<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cozy Asteroid Dodge</title>
+    <style>
+        :root {
+            --bg-cozy: #2d1b2d; /* Warm purple-brown */
+            --panel-bg: rgba(44, 62, 80, 0.85);
+            --accent: #3498db;
+        }
+
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            /* Cozy background simulation */
+            color: white;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+            #cozy-room {
+        height: 100vh;
+        width: 100%;
+        
+        display: flex;
+        justify-content: center;
+        align-items: center;
+
+        /* Main cozy image */
+        background: url("cozy-room.png") no-repeat center center;
+        background-size: cover;
+
+        /* Optional warm tint (very important for mood) */
+        position: relative;
+    }
+
+        #cozy-room::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: rgba(20, 10, 5, 0.35); /* warm dim overlay */
+        }
+
+        #cozy-room::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            box-shadow: inset 0 0 200px rgba(0,0,0,0.6);
+        }
+
+        /* The Main Game Frame */
+        #interface-container {
+            display: flex;
+            gap: 15px;
+            padding: 25px;
+            background: #1e272e;
+            border: 8px solid #0f1418;
+            border-radius: 20px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8), inset 0 0 15px rgba(255,255,255,0.05);
+            position: relative;
+            z-index: 1;
+            backdrop-filter: blur(6px);
+        }
+
+        /* Decorative "Bezel" for the screen */
+        #canvas-wrapper {
+            position: relative;
+            border: 4px solid #000;
+            border-radius: 5px;
+            overflow: hidden;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        canvas {
+            background-color: #0b090b; /* Deep space black */
+            display: block;
+        }
+
+        #scoreboard {
+            width: 220px;
+            background: rgba(30, 39, 46, 0.5);
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 1px solid #3d4e5f;
+        }
+
+        .stat-box {
+            margin-bottom: 25px;
+        }
+
+        .stat-label { font-size: 11px; text-transform: uppercase; color: #8899a6; letter-spacing: 1px; }
+        .stat-value { font-size: 26px; font-weight: bold; color: var(--accent); text-shadow: 0 0 8px rgba(52,152,219,0.5); }
+
+        #game-over {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(15, 20, 24, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            border: 2px solid var(--accent);
+            z-index: 10;
+        }
+
+        input {
+            padding: 10px;
+            margin-top: 15px;
+            background: #2c3e50;
+            border: 1px solid #5d6d7e;
+            color: white;
+            border-radius: 4px;
+            width: 80%;
+            text-align: center;
+        }
+
+        button {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-top: 15px;
+            transition: 0.2s;
+        }
+        button:hover { background: #2980b9; transform: scale(1.05); }
+
+    </style>
+
+</head>
+<body>
+    <div id="cozy-room">
+
+<div id="interface-container">
+    <div id="canvas-wrapper">
+        <canvas id="gameCanvas"></canvas>
+        
+        <div id="game-over">
+            <h1 style="margin:0; color: #ecf0f1;">SYSTEM CRASH</h1>
+            <p id="final-score">Score: 0</p>
+            <input type="text" id="playerName" placeholder="Enter Pilot Name" maxlength="10">
+            <br>
+            <button onclick="saveAndRestart()">INITIATE REBOOT</button>
+        </div>
+    </div>
+
+    <div id="scoreboard">
+        <div class="stat-box">
+            <div class="stat-label">Current Pilot</div>
+            <div id="display-name" class="stat-value">---</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">Data Points</div>
+            <div id="current-score" class="stat-value">0</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">Sector Record</div>
+            <div id="high-score" class="stat-value">0</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">Top Ace</div>
+            <div id="best-pilot" class="stat-value" style="font-size: 18px; color: #f1c40f;">Nobody</div>
+        </div>
+    </div>
+</div>
+</div>
+
+<script>
+
+    let particles = [];
+    let lastShot = 0;
+    let bullets = [];
+
+    const shipImg = new Image();
+    shipImg.src = "ship.png"; // put this in your folder
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    canvas.width = 450;
+    canvas.height = 600;
+
+    let score = 0;
+    let gameActive = true;
+    let enemies = [];
+    let stars = [];
+    let animationId;
+    let highScore = localStorage.getItem('cozyHighScore') || 0;
+    let bestPilot = localStorage.getItem('cozyBestPilot') || "Nobody";
+
+    document.getElementById('high-score').innerText = highScore;
+    document.getElementById('best-pilot').innerText = bestPilot;
+
+    // Create persistent pixel stars for background
+    for(let i=0; i<80; i++) {
+        stars.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            size: Math.random() * 2,
+            speed: Math.random() * 0.5 + 0.2
+        });
+    }
+
+    const player = {
+        x: canvas.width / 2,
+        y: canvas.height - 60,
+        size: 12,
+        speed: 7
+    };
+
+    const keys = { ArrowLeft: false, ArrowRight: false, Space: false};
+    window.addEventListener('keydown', e => keys[e.code] = true);
+    window.addEventListener('keyup', e => keys[e.code] = false);
+
+    function createExplosion(x, y, color) {
+    for (let i = 0; i < 10; i++) {
+        particles.push({
+            x: x,
+            y: y,
+            dx: (Math.random() - 0.5) * 4,
+            dy: (Math.random() - 0.5) * 4,
+            life: 30,
+            color: color
+        });
+    }
+}
+
+    function createEnemy() {
+
+        const size = Math.random() * 15 + 12;
+        enemies.push({
+            x: Math.random() * (canvas.width - size),
+            y: -size,
+            size: size,
+            speed: Math.random() * 1.5 + 2.5 + (score / 1000),
+            color: `hsl(${Math.random() * 20 + 10}, 30%, 60%)` // Brownish hues
+        });
+    }
+
+    function drawBackground() {
+        // Draw space stars
+        ctx.fillStyle = "#FFF";
+        stars.forEach(s => {
+            ctx.globalAlpha = Math.random() * 0.5 + 0.5; // Twinkle effect
+            ctx.fillRect(s.x, s.y, s.size, s.size);
+            s.y += s.speed;
+            if(s.y > canvas.height) s.y = 0;
+        });
+        ctx.globalAlpha = 1.0;
+    }
+
+    function update() {
+
+        const now = Date.now();
+
+    if (keys.Space && now - lastShot > 200) {
+        bullets.push({
+            x: player.x,
+            y: player.y,
+            speed: 8
+        });
+
+        lastShot = now;
+    }
+            particles.forEach((p, i) => {
+        p.x += p.dx;
+        p.y += p.dy;
+        p.life--;
+
+        if (p.life <= 0) {
+            particles.splice(i, 1);
+        }
+    });
+        
+    bullets.forEach((b, i) => {
+        b.y -= b.speed;
+
+        // remove if off screen
+        for (let i = bullets.length - 1; i >= 0; i--) {
+        bullets[i].y -= bullets[i].speed;
+
+        if (bullets[i].y < 0) {
+            bullets.splice(i, 1);
+        }
+    }
+    });
+
+        if (!gameActive) return;
+
+        if (keys.ArrowLeft && player.x > player.size * 2) player.x -= player.speed;
+        if (keys.ArrowRight && player.x < canvas.width - player.size * 2) player.x += player.speed;
+
+        if (Math.random() < 0.04) createEnemy();
+
+        enemies.forEach((enemy, i) => {
+    enemy.y += enemy.speed;
+
+    // player collision
+    const dist = Math.hypot(player.x - enemy.x, player.y - enemy.y);
+    if (dist < enemy.size + player.size) endGame();
+
+    // bullet collision
+    bullets.forEach((b, bi) => {
+        const d = Math.hypot(b.x - enemy.x, b.y - enemy.y);
+
+        if (d < enemy.size) {
+            createExplosion(enemy.x, enemy.y, enemy.color);
+
+            enemies.splice(i, 1);
+            bullets.splice(bi, 1);
+            score += 20;
+            document.getElementById('current-score').innerText = score;
+        }
+    });
+
+    // remove off-screen enemy
+    if (enemy.y > canvas.height + enemy.size) {
+        enemies.splice(i, 1);
+        score += 10;
+        document.getElementById('current-score').innerText = score;
+    }
+});
+        draw();
+        animationId = requestAnimationFrame(update);
+
+        
+    }
+
+    function draw() {
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    drawBackground();
+
+    // draw bullets AFTER clearing
+    ctx.fillStyle = "#00ffff";
+    bullets.forEach(b => {
+        ctx.fillRect(b.x - 2, b.y, 4, 10);
+    });
+
+            ctx.save(); // start isolated state
+
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = '#3498db';
+
+    ctx.fillStyle = '#3498db';
+    ctx.beginPath();
+    ctx.moveTo(player.x, player.y - player.size);
+    ctx.lineTo(player.x - player.size, player.y + player.size);
+    ctx.lineTo(player.x, player.y + player.size / 2);
+    ctx.lineTo(player.x + player.size, player.y + player.size);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore(); // reset everything (important)
+
+        // Asteroids
+        enemies.forEach(e => {
+            ctx.fillStyle = e.color;
+            ctx.beginPath();
+            ctx.arc(e.x, e.y, e.size, 0, Math.PI * 2);
+            ctx.fill();
+            // Add a little crater detail
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            ctx.beginPath();
+            ctx.arc(e.x - 3, e.y - 3, e.size/3, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        particles.forEach(p => {
+    ctx.globalAlpha = p.life / 30; // fade out
+    ctx.fillStyle = p.color;
+
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+    ctx.fill();
+});
+
+ctx.globalAlpha = 1.0; // reset
+    }
+    
+
+    function endGame() {
+        gameActive = false;
+        cancelAnimationFrame(animationId);
+        document.getElementById('final-score').innerText = `Final Score: ${score}`;
+        document.getElementById('game-over').style.display = 'block';
+    }
+
+    function saveAndRestart() {
+        const nameInput = document.getElementById('playerName').value || "Unknown";
+        document.getElementById('display-name').innerText = nameInput;
+
+        if (score > highScore) {
+            highScore = score;
+            bestPilot = nameInput;
+            localStorage.setItem('cozyHighScore', highScore);
+            localStorage.setItem('cozyBestPilot', bestPilot);
+            document.getElementById('high-score').innerText = highScore;
+            document.getElementById('best-pilot').innerText = bestPilot;
+        }
+
+        score = 0;
+        enemies = [];
+        gameActive = true;
+        document.getElementById('current-score').innerText = 0;
+        document.getElementById('game-over').style.display = 'none';
+        update();
+    }
+
+    update();
+</script>
+</body>
+</html>
+            background: #1e272e;
+            border: 8px solid #0f1418;
+            border-radius: 20px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8), inset 0 0 15px rgba(255,255,255,0.05);
+            position: relative;
+            z-index: 1;
+            backdrop-filter: blur(6px);
+        }
+
+        /* Decorative "Bezel" for the screen */
+        #canvas-wrapper {
+            position: relative;
+            border: 4px solid #000;
+            border-radius: 5px;
+            overflow: hidden;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        canvas {
+            background-color: #0b090b; /* Deep space black */
+            display: block;
+        }
+
+        #scoreboard {
+            width: 220px;
+            background: rgba(30, 39, 46, 0.5);
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 1px solid #3d4e5f;
+        }
+
+        .stat-box {
+            margin-bottom: 25px;
+        }
+
+        .stat-label { font-size: 11px; text-transform: uppercase; color: #8899a6; letter-spacing: 1px; }
+        .stat-value { font-size: 26px; font-weight: bold; color: var(--accent); text-shadow: 0 0 8px rgba(52,152,219,0.5); }
+
+        #game-over {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(15, 20, 24, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            border: 2px solid var(--accent);
+            z-index: 10;
+        }
+
+        input {
+            padding: 10px;
+            margin-top: 15px;
+            background: #2c3e50;
+            border: 1px solid #5d6d7e;
+            color: white;
+            border-radius: 4px;
+            width: 80%;
+            text-align: center;
+        }
+
+        button {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-top: 15px;
+            transition: 0.2s;
+        }
+        button:hover { background: #2980b9; transform: scale(1.05); }
+
+    </style>
+</head>
+<body>
+    <div id="cozy-room">
+
+<div id="interface-container">
+    <div id="canvas-wrapper">
+        <canvas id="gameCanvas"></canvas>
+        
+        <div id="game-over">
+            <h1 style="margin:0; color: #ecf0f1;">SYSTEM CRASH</h1>
+            <p id="final-score">Score: 0</p>
+            <input type="text" id="playerName" placeholder="Enter Pilot Name" maxlength="10">
+            <br>
+            <button onclick="saveAndRestart()">INITIATE REBOOT</button>
+        </div>
+    </div>
+
+    <div id="scoreboard">
+        <div class="stat-box">
+            <div class="stat-label">Current Pilot</div>
+            <div id="display-name" class="stat-value">---</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">Data Points</div>
+            <div id="current-score" class="stat-value">0</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">Sector Record</div>
+            <div id="high-score" class="stat-value">0</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">Top Ace</div>
+            <div id="best-pilot" class="stat-value" style="font-size: 18px; color: #f1c40f;">Nobody</div>
+        </div>
+    </div>
+</div>
+</div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    canvas.width = 450;
+    canvas.height = 600;
+
+    let score = 0;
+    let gameActive = true;
+    let enemies = [];
+    let stars = [];
+    let animationId;
+    let highScore = localStorage.getItem('cozyHighScore') || 0;
+    let bestPilot = localStorage.getItem('cozyBestPilot') || "Nobody";
+
+    document.getElementById('high-score').innerText = highScore;
+    document.getElementById('best-pilot').innerText = bestPilot;
+
+    // Create persistent pixel stars for background
+    for(let i=0; i<80; i++) {
+        stars.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            size: Math.random() * 2,
+            speed: Math.random() * 0.5 + 0.2
+        });
+    }
+
+    const player = {
+        x: canvas.width / 2,
+        y: canvas.height - 60,
+        size: 12,
+        speed: 7
+    };
+
+    const keys = { ArrowLeft: false, ArrowRight: false };
+    window.addEventListener('keydown', e => keys[e.code] = true);
+    window.addEventListener('keyup', e => keys[e.code] = false);
+
+    function createEnemy() {
+        const size = Math.random() * 15 + 12;
+        enemies.push({
+            x: Math.random() * (canvas.width - size),
+            y: -size,
+            size: size,
+            speed: Math.random() * 1.5 + 2.5 + (score / 1000),
+            color: `hsl(${Math.random() * 20 + 10}, 30%, 60%)` // Brownish hues
+        });
+    }
+
+    function drawBackground() {
+        // Draw space stars
+        ctx.fillStyle = "#FFF";
+        stars.forEach(s => {
+            ctx.globalAlpha = Math.random() * 0.5 + 0.5; // Twinkle effect
+            ctx.fillRect(s.x, s.y, s.size, s.size);
+            s.y += s.speed;
+            if(s.y > canvas.height) s.y = 0;
+        });
+        ctx.globalAlpha = 1.0;
+    }
+
+    function update() {
+        if (!gameActive) return;
+
+        if (keys.ArrowLeft && player.x > player.size * 2) player.x -= player.speed;
+        if (keys.ArrowRight && player.x < canvas.width - player.size * 2) player.x += player.speed;
+
+        if (Math.random() < 0.04) createEnemy();
+
+        enemies.forEach((enemy, i) => {
+            enemy.y += enemy.speed;
+            
+            const dist = Math.hypot(player.x - enemy.x, player.y - enemy.y);
+            if (dist < enemy.size + player.size) endGame();
+
+            if (enemy.y > canvas.height + enemy.size) {
+                enemies.splice(i, 1);
+                score += 10;
+                document.getElementById('current-score').innerText = score;
+            }
+        });
+
+        draw();
+        animationId = requestAnimationFrame(update);
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        drawBackground();
+
+        // Player (Triangle)
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = '#3498db';
+        ctx.fillStyle = '#3498db';
+        ctx.beginPath();
+        ctx.moveTo(player.x, player.y - player.size);
+        ctx.lineTo(player.x - player.size, player.y + player.size);
+        ctx.lineTo(player.x + player.size, player.y + player.size);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Asteroids
+        enemies.forEach(e => {
+            ctx.fillStyle = e.color;
+            ctx.beginPath();
+            ctx.arc(e.x, e.y, e.size, 0, Math.PI * 2);
+            ctx.fill();
+            // Add a little crater detail
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            ctx.beginPath();
+            ctx.arc(e.x - 3, e.y - 3, e.size/3, 0, Math.PI * 2);
+            ctx.fill();
+        });
+    }
+
+    function endGame() {
+        gameActive = false;
+        cancelAnimationFrame(animationId);
+        document.getElementById('final-score').innerText = `Final Score: ${score}`;
+        document.getElementById('game-over').style.display = 'block';
+    }
+
+    function saveAndRestart() {
+        const nameInput = document.getElementById('playerName').value || "Unknown";
+        document.getElementById('display-name').innerText = nameInput;
+
+        if (score > highScore) {
+            highScore = score;
+            bestPilot = nameInput;
+            localStorage.setItem('cozyHighScore', highScore);
+            localStorage.setItem('cozyBestPilot', bestPilot);
+            document.getElementById('high-score').innerText = highScore;
+            document.getElementById('best-pilot').innerText = bestPilot;
+        }
+
+        score = 0;
+        enemies = [];
+        gameActive = true;
+        document.getElementById('current-score').innerText = 0;
+        document.getElementById('game-over').style.display = 'none';
+        update();
+    }
+
+    update();
+</script>
+</body>
+</html>
